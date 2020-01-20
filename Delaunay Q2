@@ -1,0 +1,75 @@
+Program testt
+  
+Implicit none
+
+real  :: px,py,x1,y1,x2,y2,x3,y3
+logical :: result
+
+
+px= 1.5
+py= 1.5
+x1= 0.0
+y1= 0.0
+x2= 1.0
+y2= 0.0
+x3= 0.0
+y3= 1.0
+
+result = IsInsideTriangle (x1,y1,x2,y2,x3,y3,px,py)
+
+
+
+if ( result  .eqv.  .true. ) then
+
+   Print*, " Le point H est à l'intérieur du triangle "
+
+else 
+
+   Print*, " Le point H est à l'extérieur du triangle "
+
+end if
+
+
+contains
+
+function side(x1,y1,x2,y2,x3,y3)
+ ! Teste si point p est : à Gauche & Sur & à Droite de la droite (p1p2).
+
+  implicit none
+ 
+  real :: x1,y1,x2,y2,x3,y3
+  real :: side
+
+  side = (x1-x3)*(y2-y3) - (x2-x3)*(y1-y3)
+
+! Méthode:  side >0 si p est à gauche de la droite P1-P2
+!           side =0 si le point est surla droite
+!           side <0 ... droite
+
+end function side
+
+function IsInsideTriangle (x1,y1,x2,y2,x3,y3,px,py)
+
+Implicit none
+
+real :: x1,y1,x2,y2,x3,y3,px,py,d1,d2,d3
+
+logical :: IsInsideTriangle, neg,pos
+
+! Teste si point H est intérieur au Triangle ABC.
+! Méthode: Test si H et C sont a gauche de AB, ou pas, mais en meme temps
+
+d1 = side(px,py,x1,y1,x2,y2)
+d2 = side(px,py,x2,y2,x3,y3)
+d3 = side(px,py,x3,y3,x1,y1)
+
+neg = (d1 < 0) .or. (d2 < 0) .or. (d3 < 0)
+pos = (d1 > 0) .or. (d2 > 0) .or. (d3 > 0)
+
+IsInsideTriangle = .not.  (neg .and. pos)
+
+
+
+end function IsInsideTriangle
+
+end program testt
