@@ -21,7 +21,7 @@
     P12=COP3(1)*COP3(4)-COP3(2)*COP3(3)
     P23=COP3(3)*COP3(6)-COP3(4)*COP3(5)
     P31=COP3(5)*COP3(2)-COP3(6)*COP3(1)
-    A123=abs((P12+P23+P31))
+    A123=abs((P12+P23+P31)/2)
 
 
     !Calcul des coordonnées des 'différences' des sommets
