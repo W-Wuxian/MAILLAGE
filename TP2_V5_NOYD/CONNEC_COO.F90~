@@ -1,0 +1,169 @@
+#define D_STCO = 6
+#define D_STCN = 3
+!TRIANGLE T3
+#define D_NBPELE = 3
+!EDGE 2 PTS
+#define D_NBPEDG = 2
+
+program CONNEC_COO
+  IMPLICIT NONE
+  INTEGER, PARAMETER :: PR = 8
+  INTEGER, PARAMETER :: STCO = 6, STCN = 3
+  INTEGER, PARAMETER :: NBPELE = 3, NBPEDG = 2
+
+  type tab_2D
+     real(PR), dimension(6) :: TCO !X1,Y1,X2,Y2,X3,Y3
+     integer,  dimension(3) :: TCN !P1,P2,P3
+     !integer,                  :: TTAG
+  end type tab_2D
+
+  type(tab_2D), dimension(:), allocatable :: T2D
+
+  INTEGER :: DIM ,NV, NE, NT
+  REAL(PR),     DIMENSION(:),   ALLOCATABLE :: T1CO    !TABLE DE COORDONNEES
+  INTEGER,      DIMENSION(:),   ALLOCATABLE :: T1CN    !TABLE DE CONNECTIVITE
+  INTEGER,      DIMENSION(:),   ALLOCATABLE :: T1ED    !TABLE EDGES
+  INTEGER,      DIMENSION(:),   ALLOCATABLE :: T1ED_L  !TABLE EDGES AVEC LES LABELS
+  REAL(PR),     DIMENSION(:,:), ALLOCATABLE :: T2CO    !TABLE DE COORDONNEES
+  INTEGER,      DIMENSION(:,:), ALLOCATABLE :: T2CN    !TABLE DE CONNECTIVITE
+
+  INTEGER :: i
+
+  CHARACTER(LEN=20) :: MESH_FILE
+  
+  MESH_FILE = "CARRE2.mesh"
+  PRINT*,'DEFINE:', STCO,STCN,NBPELE,NBPEDG
+  CALL RD_MF_CONNEC_COO(MESH_FILE,DIM,NV,NE,NT,T1CO,T1CN,T1ED,T1ED_L,T2D,T2CO,T2CN)
+
+  OPEN(20,file="VERIF.txt")
+  WRITE(20,*)"TYPE DERIVE tab_2D:T2D"
+  DO i = 1, NT
+     WRITE(20,*)T2D(i)%TCN(:),T2D(i)%TCO(:)!,T2D(i)%TCN(2),T2D(i)%TCN(3)
+  END DO
+  WRITE(20,*)"T1CN ET T1CO:"
+  DO i = 1, NT*NBPELE, NBPELE
+     WRITE(20,*)T1CN(i:i+2),T1CO(2*T1CN(i)-1),T1CO(2*T1CN(i)),T1CO(2*T1CN(i+1)-1),&
+          T1CO(2*T1CN(i+1)),T1CO(2*T1CN(i+2)-1),T1CO(2*T1CN(i+2))
+  END DO
+  WRITE(20,*)"EDGE T1ED:"
+  DO i = 1, NE*NBPEDG, NBPEDG
+     WRITE(20,*)T1ED(i:i+1)
+  END DO
+  WRITE(20,*)"EDGE T1ED_L EDGE+LABEL:"
+  DO i = 1, NE*(NBPEDG+1), (NBPEDG+1)
+     WRITE(20,*)T1ED_L(i:i+2)
+  END DO
+  WRITE(20,*)"T2CN ET T2CO:"
+  DO i = 1, NT
+     WRITE(20,*)T2CN(:,i),T2CO(:,T2CN(1,i)),T2CO(:,T2CN(2,i)),T2CO(:,T2CN(3,i))
+  END DO
+  CLOSE(20)
+
+DEALLOCATE(T2D, T1CO, T1CN, T1ED, T1ED_L, T2CO, T2CN)
+
+CONTAINS
+  !READ MESH FILE COMPUTE COO TAB & CONNECTIVITY TAB
+  SUBROUTINE RD_MF_CONNEC_COO(MFILE,DIM,NV,NE,NT,T1CO,T1CN,T1ED,T1ED_L,T2D,T2CO,T2CN)
+    CHARACTER(LEN=*), INTENT(IN) :: MFILE           !mesh file name
+    INTEGER, INTENT(INOUT)       :: DIM, NV, NE, NT          !nbr vertex, nbr triangles
+    REAL(PR),     DIMENSION(:),   ALLOCATABLE, INTENT(OUT) :: T1CO    !TABLE DE COORDONNEES
+    INTEGER,      DIMENSION(:),   ALLOCATABLE, INTENT(OUT) :: T1CN    !TABLE DE CONNECTIVITE
+    INTEGER,      DIMENSION(:),   ALLOCATABLE, INTENT(OUT) :: T1ED    !TABLE EDGES
+    INTEGER,      DIMENSION(:),   ALLOCATABLE, INTENT(OUT) :: T1ED_L    !TABLE EDGES AVEC LES LABELS
+    TYPE(tab_2D), DIMENSION(:),   ALLOCATABLE, INTENT(OUT) :: T2D !IDEM+PHYSICAL TAG
+    REAL(PR),     DIMENSION(:,:), ALLOCATABLE, INTENT(OUT) :: T2CO    !TABLE DE COORDONNEES
+    INTEGER,      DIMENSION(:,:), ALLOCATABLE, INTENT(OUT) :: T2CN    !TABLE DE CONNECTIVITE
+
+
+    REAL(PR) :: X, Y, Z
+    INTEGER  :: LABEL
+
+    INTEGER          :: TAG
+    CHARACTER(LEN=100) :: MFORMAT
+    INTEGER          :: MDIM
+
+    INTEGER :: i, i1, i2, e1, e3, j
+    INTEGER :: P1, P2, P3
+
+    TAG = 10
+    OPEN(TAG, file = MFILE, ACTION = "READ")
+    READ(TAG,*)MFORMAT
+    PRINT*,TRIM(ADJUSTL(MFORMAT))
+    READ(TAG,*)MFORMAT
+    PRINT*,TRIM(ADJUSTL(MFORMAT))
+    READ(TAG,*)MDIM
+    PRINT*,'DIM=', MDIM-1 !2D
+    MDIM = MDIM -1; DIM = MDIM
+    READ(TAG,*)MFORMAT
+    PRINT*,TRIM(ADJUSTL(MFORMAT))
+    READ(TAG,*)NV
+    ALLOCATE( T1CO( (MDIM)*NV ), T2CO( MDIM,NV ) )
+    PRINT*,'NBR VERTICES = ',NV
+    i1 = 1
+    vertex:DO i = 1, NV
+       READ(TAG,*) X, Y, Z, LABEL
+       PRINT*, X, Y, Z, LABEL
+       i2 = i1 + 1
+       T1CO(i1) = X
+       T1CO(i2) = Y
+       i1 = i2 + 1
+       T2CO(1,i) = X
+       T2CO(2,i) = Y
+    END DO vertex
+    READ(TAG,*)MFORMAT
+    PRINT*,MFORMAT
+    READ(TAG,*)NE
+    ALLOCATE( T1ED( NE*(NBPEDG) ), T1ED_L( NE*(NBPEDG+1) ) )
+    PRINT*,'NBR EDGES =',NE
+    i1 = 1; e1= 1
+    edges: DO i=1, NE
+    READ(TAG,*)P1, P2, LABEL
+    PRINT*, P1, P2, LABEL
+    i2 = i1 + 1
+    T1ED(i1) = P1
+    T1ED(i2) = P2
+    i1 = i2 + 1
+    e3 = e1 +2
+    T1ED_L(e1)   = P1
+    T1ED_L(e1+1) = P2
+    T1ED_L(e3)   = LABEL
+    e1 = e3 +1
+    END DO edges
+    READ(TAG,*)MFORMAT
+    PRINT*,MFORMAT
+    READ(TAG,*)NT
+    ALLOCATE( T1CN( NT*(NBPELE) ), T2CN(NBPELE,NT) )
+    PRINT*,'NBR TRIANGLES =',NT
+    i1 = 1
+    triangles: DO i=1, NT
+    READ(TAG,*)P1, P2, P3, LABEL
+    PRINT*, P1, P2, P3, LABEL
+    i2 = i1 + 2
+    T1CN(i1)   = P1
+    T1CN(i1+1) = P2
+    T1CN(i2)   = P3
+    i1 = i2 + 1
+    T2CN(1,i) = P1
+    T2CN(2,i) = P2
+    T2CN(3,i) = P3
+  END DO triangles
+  READ(TAG,*)MFORMAT
+  PRINT*,MFORMAT
+  CLOSE(TAG)
+
+  !FORMATION DE TD:
+  ALLOCATE(T2D(NT))
+  i1 = 1
+  DO i = 1, NT*NBPELE, NBPELE
+    PRINT*,'ii=',i
+    T2D(i1)%TCN(1) = T1CN(i)
+    T2D(i1)%TCO(1) = T1CO(2 * (T2D(i1)%TCN(1)) - 1); T2D(i1)%TCO(2) = T1CO(2 * (T2D(i1)%TCN(1)))
+    T2D(i1)%TCN(2) = T1CN(i+1)
+    T2D(i1)%TCO(3) = T1CO(2 * (T2D(i1)%TCN(2)) - 1); T2D(i1)%TCO(4) = T1CO(2 * (T2D(i1)%TCN(2)))
+    T2D(i1)%TCN(3) = T1CN(i+2)
+    T2D(i1)%TCO(5) = T1CO(2 * (T2D(i1)%TCN(3)) - 1); T2D(i1)%TCO(6) = T1CO(2 * (T2D(i1)%TCN(3)))
+    i1 = i1 + 1
+  END DO
+  END SUBROUTINE RD_MF_CONNEC_COO
+
+end program CONNEC_COO

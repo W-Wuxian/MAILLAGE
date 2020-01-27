@@ -1,0 +1,15 @@
+F90 = gfortran
+FLAG = -O2 -g -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
+
+EXE = run
+
+all : $(EXE)
+
+$(EXE) : mod_VOI.o mod_CONNEC_COO.o main.o
+	$(F90) $(FLAG) -o $(EXE) $^
+
+%.o : %.F90
+	$(F90) $(FLAG) -c $<
+
+clean :
+	rm -f *.o *.mod *.txt
